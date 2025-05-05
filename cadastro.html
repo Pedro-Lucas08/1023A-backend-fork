@@ -34,16 +34,21 @@
                     method: "POST",
                     body: JSON.stringify(objEstudante)
                 })
-                if (resposta.status === 200) {
+
+                if(resposta.status===200){
                     alert("Estudante cadastrado com sucesso!")
-                } if (resposta.status === 400) {
-                    alert(`Erro do lado do backend:" ${dados.mensagem}`)
-                } if (resposta.status === 404) {
-                    alert("Erro não identificado, tente novamente!")
                 }
-            } catch (erro) {
-                alert("Erro: Erro na requisição do FETCH\n" +
-                    "Você ligou o BACKEND com npm run dev?")
+                if(resposta.status===400){
+                    const dados = await resposta.json()
+                    alert(`Erro do lado do backend:"\n${dados.mensagem}`)
+                }
+                if(resposta.status===404){
+                    alert("Erro não identificado. :(")
+                }
+
+            }catch(erro){
+                alert("Erro: Erro na requisição do FETCH\n"+
+                 "Você ligou o BACKEND com npm run dev?")
             }
         }
     </script>

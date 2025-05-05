@@ -42,6 +42,46 @@ app.get('/estudantes', async (request: FastifyRequest, reply: FastifyReply) => {
         }
     }
 })
+app.post('/estudantes', async (request: FastifyRequest, reply: FastifyReply) => {
+    const {id,nome} = request.body as any
+    try {
+        const conn =  await mysql.createConnection({
+            host: "localhost",
+            user: 'root',
+            password: "",
+            database: 'banco1023a',
+            port: 3306
+        })
+        const resultado =  await conn.query("INSERT INTO estudantes (id,nome) VALUES (?,?)",[id,nome])
+        const [dados, camposTabela] = resultado
+        reply.status(200).send(dados)
+    }
+    catch (erro: any) {
+        switch (erro.code) {
+            case "ECONNREFUSED":
+                console.log("ERRO: LIGUE O LARAGÃO!!! CABEÇA!");
+                reply.status(400).send({ mensagem: "ERRO: LIGUE O LARAGÃO!!! CABEÇA!" });
+                break;
+            case "ER_BAD_DB_ERROR":
+                console.log("ERRO: CONFIRA O NOME DO BANCO DE DADOS OU CRIE UM NOVO BANCO COM O NOME QUE VOCÊ COLOCOU LÁ NA CONEXÃO");
+                reply.status(400).send({ mensagem: "ERRO: CONFIRA O NOME DO BANCO DE DADOS OU CRIE UM NOVO BANCO COM O NOME QUE VOCÊ COLOCOU LÁ NA CONEXÃO" });
+                break;
+            case "ER_ACCESS_DENIED_ERROR":
+                console.log("ERRO: CONFIRA O USUÁRIO E SENHA NA CONEXÃO");
+                reply.status(400).send({ mensagem: "ERRO: CONFIRA O USUÁRIO E SENHA NA CONEXÃO" });
+                break;
+            case "ER_DUP_ENTRY":
+                console.log("ERRO: VOCÊ DUPLICOU A CHAVE PRIMÁRIA");
+                reply.status(400).send({ mensagem: "ERRO: VOCÊ DUPLICOU A CHAVE PRIMÁRIA" });
+                break;
+            default:
+                console.log(erro);
+                reply.status(400).send({ mensagem: "ERRO DESCONHECIDO OLHE O TERMINAL DO BACKEND" });
+                break;
+        }
+    
+    }
+})
 
 app.listen({ port: 8000 }, (err, address) => {
     if (err) {
