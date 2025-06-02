@@ -1,46 +1,192 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Título Modificado</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Usuários Registrados</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: linear-gradient(135deg, #1f1f1f, #121212);
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 25px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #00ffc3;
+    }
+
+    a {
+      display: inline-block;
+      margin-bottom: 25px;
+      text-decoration: none;
+      padding: 12px 20px;
+      background: #00ffc3;
+      color: #000;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+
+    a:hover {
+      background: #00c9a7;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    th {
+      color: #00ffc3;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+    }
+
+    tr:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    #error-message {
+      background-color: #ff3b3b;
+      color: #fff;
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      text-align: center;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-bottom: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(255,255,255,0.02);
+      }
+
+      td {
+        padding-left: 45%;
+        position: relative;
+      }
+
+      td::before {
+        position: absolute;
+        top: 12px;
+        left: 20px;
+        font-weight: bold;
+        color: #00ffc3;
+      }
+
+      td:nth-of-type(1)::before { content: "ID"; }
+      td:nth-of-type(2)::before { content: "Nome"; }
+      td:nth-of-type(3)::before { content: "Email"; }
+    }
+  </style>
 </head>
 <body>
-    <a href="./cadastro.html">Link Cadastro Estudante</a>
-    <h1>Lista de estudantes!</h1>
-    <ul id="minhalista">
 
-    </ul>
-    <script>
-        async function buscaDados(){
-            const resposta = await fetch("http://localhost:8000/estudantes")
-            console.log(resposta)
-            if(resposta.status ===200){
-                const dados = await resposta.json()
-                console.log(dados)
-                console.log(dados[0].nome)
-                const ul = document.getElementById("minhalista")
-                for (let i = 0; i < dados.length; i++) {
-                    const element = dados[i];
-                    const novoli = document.createElement("li")
-                    novoli.innerText = element.nome
-                    ul.appendChild(novoli)
-                }
+  <div class="container">
+    <a href="./cadastro.html">Novo Usuário</a>
+    <h1>Usuários Registrados</h1>
 
-                //Criem li a partir do vetor dados
-                //Coloque o texto que vem do banco no li
-                //Adicione o li na ul com id "minhalista" 
-            }else{
-                if(resposta.status ===400){
-                    const dados = await resposta.json()
-                    alert(dados.mensagem)
-                }
-                else{
-                    alert("ERRO NÃO IDENTIFICADO");
-                }
-            }
+    <div id="error-message"></div>
+
+    <table aria-label="Lista de Usuários">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Email</th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabela"></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function buscaUsuarios() {
+      const errorDiv = document.getElementById('error-message');
+      const tbody = document.getElementById('corpoTabela');
+      errorDiv.style.display = 'none';
+      tbody.innerHTML = '';
+
+      try {
+        const resposta = await fetch("http://localhost:8000/usuarios");
+        if (resposta.ok) {
+          const usuarios = await resposta.json();
+
+          if (usuarios.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Nenhum usuário encontrado.</td></tr>';
+            return;
+          }
+
+          usuarios.forEach(usuario => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+              <td>${usuario.id}</td>
+              <td>${usuario.nome}</td>
+              <td>${usuario.email}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          const erro = await resposta.json();
+          errorDiv.textContent = erro.mensagem || "Erro ao buscar usuários.";
+          errorDiv.style.display = 'block';
         }
-        buscaDados()
-    </script>
+      } catch (error) {
+        errorDiv.textContent = "Falha na conexão: " + error.message;
+        errorDiv.style.display = 'block';
+      }
+    }
+
+    buscaUsuarios();
+  </script>
+
 </body>
 </html>

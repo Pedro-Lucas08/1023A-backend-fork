@@ -1,92 +1,148 @@
-import mysql, { Connection, ConnectionOptions } from 'mysql2/promise';
-import fastify, { FastifyRequest, FastifyReply } from 'fastify'
-import cors from '@fastify/cors'
-const app = fastify()
-app.register(cors)
+// server.ts
 
-app.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
-    reply.send("Fastify Funcionando")
-})
-app.get('/estudantes', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-        const conn =  await mysql.createConnection({
-            host: "localhost",
-            user: 'root',
-            password: "",
-            database: 'banco1023a',
-            port: 3306
-        })
-        const resultado =  await conn.query("SELECT * FROM estudantes")
-        const [dados, camposTabela] = resultado
-        reply.status(200).send(dados)
-    }
-    catch (erro: any) {
-        if (erro.code === 'ECONNREFUSED') {
-            console.log("ERRO: LIGUE O LARAGAO => Conexão Recusada")
-            reply.status(400).send({mensagem:"ERRO: LIGUE O LARAGAO => Conexão Recusada"})
-        } else if (erro.code === 'ER_BAD_DB_ERROR') {
-            console.log("ERRO: CRIE UM BANCO DE DADOS COM O NOME DEFINIDO NA CONEXÃO")
-            reply.status(400).send({mensagem:"ERRO: CRIE UM BANCO DE DADOS COM O NOME DEFINIDO NA CONEXÃO"})
-        } else if (erro.code === 'ER_ACCESS_DENIED_ERROR') {
-            console.log("ERRO: CONFERIR O USUÁRIO E SENHA DEFINIDOS NA CONEXÃO")
-            reply.status(400).send({mensagem:"ERRO: CONFERIR O USUÁRIO E SENHA DEFINIDOS NA CONEXÃO"})
-        } else if (erro.code === 'ER_NO_SUCH_TABLE') {
-            console.log("ERRO: Você deve criar a tabela com o mesmo nome da sua QUERY")
-            reply.status(400).send({mensagem:"ERRO: Você deve criar a tabela com o mesmo nome da sua QUERY"})
-        } else if (erro.code === 'ER_PARSE_ERROR') {
-            console.log("ERRO: Você tem um erro de escrita em sua QUERY confira: VÍRGULAS, PARENTESES E NOME DE COLUNAS")
-            reply.status(400).send({mensagem:"ERRO: Você tem um erro de escrita em sua QUERY confira: VÍRGULAS, PARENTESES E NOME DE COLUNAS"})
-        } else {
-            console.log(erro)
-            reply.status(400).send({mensagem:"ERRO: NÃO IDENTIFICADO"})
-        }
-    }
-})
-app.post('/estudantes', async (request: FastifyRequest, reply: FastifyReply) => {
-    const {id,nome} = request.body as any
-    try {
-        const conn =  await mysql.createConnection({
-            host: "localhost",
-            user: 'root',
-            password: "",
-            database: 'banco1023a',
-            port: 3306
-        })
-        const resultado =  await conn.query("INSERT INTO estudantes (id,nome) VALUES (?,?)",[id,nome])
-        const [dados, camposTabela] = resultado
-        reply.status(200).send(dados)
-    }
-    catch (erro: any) {
-        switch (erro.code) {
-            case "ECONNREFUSED":
-                console.log("ERRO: LIGUE O LARAGÃO!!! CABEÇA!");
-                reply.status(400).send({ mensagem: "ERRO: LIGUE O LARAGÃO!!! CABEÇA!" });
-                break;
-            case "ER_BAD_DB_ERROR":
-                console.log("ERRO: CONFIRA O NOME DO BANCO DE DADOS OU CRIE UM NOVO BANCO COM O NOME QUE VOCÊ COLOCOU LÁ NA CONEXÃO");
-                reply.status(400).send({ mensagem: "ERRO: CONFIRA O NOME DO BANCO DE DADOS OU CRIE UM NOVO BANCO COM O NOME QUE VOCÊ COLOCOU LÁ NA CONEXÃO" });
-                break;
-            case "ER_ACCESS_DENIED_ERROR":
-                console.log("ERRO: CONFIRA O USUÁRIO E SENHA NA CONEXÃO");
-                reply.status(400).send({ mensagem: "ERRO: CONFIRA O USUÁRIO E SENHA NA CONEXÃO" });
-                break;
-            case "ER_DUP_ENTRY":
-                console.log("ERRO: VOCÊ DUPLICOU A CHAVE PRIMÁRIA");
-                reply.status(400).send({ mensagem: "ERRO: VOCÊ DUPLICOU A CHAVE PRIMÁRIA" });
-                break;
-            default:
-                console.log(erro);
-                reply.status(400).send({ mensagem: "ERRO DESCONHECIDO OLHE O TERMINAL DO BACKEND" });
-                break;
-        }
-    
-    }
-})
+import mysql from 'mysql2/promise';
+import fastify, { FastifyRequest, FastifyReply } from 'fastify';
+import cors from '@fastify/cors';
 
+const app = fastify();
+app.register(cors);
+
+// Conexão com banco de dados
+const conexaoDB = async () => {
+  return await mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'banco1023a',
+    port: 3306
+  });
+};
+
+// Rota raiz
+app.get('/', async (_, reply) => {
+  reply.send("Fastify Funcionando");
+});
+
+// Tratamento de erros de banco
+const tratarErro = (erro: any, reply: FastifyReply) => {
+  switch (erro.code) {
+    case "ECONNREFUSED":
+      reply.status(400).send({ mensagem: "ERRO: CONEXÃO RECUSADA. LIGUE O SERVIDOR MYSQL" });
+      break;
+    case "ER_BAD_DB_ERROR":
+      reply.status(400).send({ mensagem: "ERRO: BANCO DE DADOS NÃO EXISTE" });
+      break;
+    case "ER_NO_SUCH_TABLE":
+      reply.status(400).send({ mensagem: "ERRO: TABELA NÃO ENCONTRADA NO BANCO DE DADOS" });
+      break;
+    case "ER_DUP_ENTRY":
+      reply.status(400).send({ mensagem: "ERRO: REGISTRO DUPLICADO" });
+      break;
+    default:
+      console.error(erro);
+      reply.status(400).send({ mensagem: "ERRO DESCONHECIDO" });
+  }
+};
+
+// ===== ROTA: USUÁRIOS =====
+
+// Listar usuários
+app.get('/usuarios', async (_, reply) => {
+  try {
+    const conn = await conexaoDB();
+    const [dados] = await conn.query("SELECT * FROM usuarios");
+    reply.send(dados);
+  } catch (erro: any) {
+    tratarErro(erro, reply);
+  }
+});
+
+// Cadastrar usuário
+app.post('/usuarios', async (request, reply) => {
+  const { id, nome, email } = request.body as any;
+
+  if (!id || !nome || !email) {
+    return reply.status(400).send({ mensagem: "Dados incompletos para cadastro de usuário" });
+  }
+
+  try {
+    const conn = await conexaoDB();
+    const resultado = await conn.query(
+      "INSERT INTO usuarios (id, nome, email) VALUES (?, ?, ?)",
+      [id, nome, email]
+    );
+    reply.send(resultado);
+  } catch (erro: any) {
+    tratarErro(erro, reply);
+  }
+});
+
+// ===== ROTA: PRODUTOS =====
+
+// Listar produtos
+app.get('/produtos', async (_, reply) => {
+  try {
+    const conn = await conexaoDB();
+    const [dados] = await conn.query("SELECT * FROM produtos");
+    reply.send(dados);
+  } catch (erro: any) {
+    tratarErro(erro, reply);
+  }
+});
+
+// Cadastrar produto
+app.post('/produtos', async (request, reply) => {
+  const { id, nome, preco } = request.body as any;
+
+  if (!id || !nome || preco == null) {
+    return reply.status(400).send({ mensagem: "Dados incompletos para cadastro de produto" });
+  }
+
+  try {
+    const conn = await conexaoDB();
+    const resultado = await conn.query(
+      "INSERT INTO produtos (id, nome, preco) VALUES (?, ?, ?)",
+      [id, nome, preco]
+    );
+    reply.send(resultado);
+  } catch (erro: any) {
+    tratarErro(erro, reply);
+  }
+});
+
+// Iniciar servidor
 app.listen({ port: 8000 }, (err, address) => {
-    if (err) {
-        console.error(err)
-        process.exit(1)
-    }
-    console.log(`Server listening at ${address}`)
-})
+  if (err) {
+    console.error(err);
+    process.exit(1);
+  }
+  console.log(`Servidor rodando em: ${address}`);
+});
+
+
+
+
+
+
+
+
+
+/*
+
+
+
+use banco1023a;
+CREATE TABLE usuarios (
+  id INT PRIMARY KEY,
+  nome VARCHAR(100),
+  email VARCHAR(100)
+);
+
+use banco1023a;
+CREATE TABLE produtos (
+  id INT PRIMARY KEY,
+  nome VARCHAR(100),
+  preco DECIMAL(10, 2)
+);
+
+*/

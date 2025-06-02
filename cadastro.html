@@ -1,57 +1,275 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Estudante</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro de Usuários e Produtos</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: linear-gradient(135deg, #1e1e1e, #121212);
+      color: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    h1, h4 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #00ffc3;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .card-header {
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding: 10px 15px;
+      border-radius: 8px;
+      background: #00ffc3;
+      color: #000;
+      text-align: center;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #555;
+      background: #222;
+      color: #fff;
+    }
+
+    button {
+      margin-top: 20px;
+      background: #00ffc3;
+      color: #000;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #00c9a7;
+    }
+
+    .form-text {
+      margin-top: 10px;
+      color: #ff4f4f;
+      font-size: 0.9rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
+    th {
+      background: #00ffc3;
+      color: #000;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+
+    tr:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    @media (max-width: 768px) {
+      .row {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
-
 <body>
-    <form onsubmit="event.preventDefault();trataform()">
-        <label for="id">id</label>
-        <input type="text" id="id" name="id">
-        <label for="nome">nome</label>
-        <input type="text" id="nome" name="nome">
-        <input type="submit" value="Cadastrar">
-    </form>
-    <script>
-        async function trataform() {
-            const inputId = document.getElementById("id")
-            const inputNome = document.getElementById("nome")
-            const id = inputId.value
-            const nome = inputNome.value
 
-            const objEstudante = {
-                id,
-                nome
-            }
-            try {
-                const resposta = await fetch("http://localhost:8000/estudantes", {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    method: "POST",
-                    body: JSON.stringify(objEstudante)
-                })
+  <div class="container">
+    <h1>Cadastro de Usuários e Produtos</h1>
 
-                if(resposta.status===200){
-                    alert("Estudante cadastrado com sucesso!")
-                }
-                if(resposta.status===400){
-                    const dados = await resposta.json()
-                    alert(`Erro do lado do backend:"\n${dados.mensagem}`)
-                }
-                if(resposta.status===404){
-                    alert("Erro não identificado. :(")
-                }
+    <!-- Usuários -->
+    <div class="card">
+      <div class="card-header">Cadastro de Usuário</div>
+      <form id="formUsuario">
+        <div class="row">
+          <div class="col"><input type="number" id="usuarioId" placeholder="ID" required></div>
+          <div class="col"><input type="text" id="usuarioNome" placeholder="Nome" required></div>
+          <div class="col"><input type="email" id="usuarioEmail" placeholder="Email" required></div>
+        </div>
+        <button type="submit">Cadastrar Usuário</button>
+        <div class="form-text" id="msgUsuario"></div>
+      </form>
+    </div>
 
-            }catch(erro){
-                alert("Erro: Erro na requisição do FETCH\n"+
-                 "Você ligou o BACKEND com npm run dev?")
-            }
-        }
-    </script>
+
+
+
+
+
+
+    <div class="card">
+      <div class="card-header" style="background: #888; color: #fff;">Cadastro de Produto</div>
+      <form id="formProduto">
+        <div class="row">
+          <div class="col"><input type="number" id="produtoId" placeholder="ID" required></div>
+          <div class="col"><input type="text" id="produtoNome" placeholder="Nome do Produto" required></div>
+          <div class="col"><input type="number" step="0.01" id="produtoPreco" placeholder="Preço" required></div>
+        </div>
+        <button type="submit">Cadastrar Produto</button>
+        <div class="form-text" id="msgProduto"></div>
+      </form>
+    </div>
+
+
+
+
+  
+
+    <!-- Tabelas -->
+    <div class="row">
+      <div class="col">
+        <h4>Lista de Usuários</h4>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Nome</th><th>Email</th></tr>
+          </thead>
+          <tbody id="tabelaUsuarios"></tbody>
+        </table>
+      </div>
+      <div class="col">
+        <h4>Lista de Produtos</h4>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Nome</th><th>Preço</th></tr>
+          </thead>
+          <tbody id="tabelaProdutos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8000";
+
+    // Cadastrar Usuário
+    document.getElementById("formUsuario").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("usuarioId").value;
+      const nome = document.getElementById("usuarioNome").value;
+      const email = document.getElementById("usuarioEmail").value;
+
+      const res = await fetch(`${API}/usuarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, nome, email })
+      });
+
+      const json = await res.json();
+      document.getElementById("msgUsuario").textContent = json.mensagem || "Usuário cadastrado!";
+      carregarUsuarios();
+    });
+
+
+
+    
+    // Cadastrar Produto
+    document.getElementById("formProduto").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("produtoId").value;
+      const nome = document.getElementById("produtoNome").value;
+      const preco = document.getElementById("produtoPreco").value;
+
+      const res = await fetch(`${API}/produtos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, nome, preco })
+      });
+
+      const json = await res.json();
+      document.getElementById("msgProduto").textContent = json.mensagem || "Produto cadastrado!";
+      carregarProdutos();
+    });
+
+
+
+
+    // Carregar Usuários
+    async function carregarUsuarios() {
+      const res = await fetch(`${API}/usuarios`);
+      const lista = await res.json();
+      const tabela = document.getElementById("tabelaUsuarios");
+      tabela.innerHTML = "";
+      lista.forEach(u => {
+        tabela.innerHTML += `<tr><td>${u.id}</td><td>${u.nome}</td><td>${u.email}</td></tr>`;
+      });
+    }
+
+
+
+    
+    // Carregar Produtos
+    async function carregarProdutos() {
+      const res = await fetch(`${API}/produtos`);
+      const lista = await res.json();
+      const tabela = document.getElementById("tabelaProdutos");
+      tabela.innerHTML = "";
+      lista.forEach(p => {
+        tabela.innerHTML += `<tr><td>${p.id}</td><td>${p.nome}</td><td>${p.preco}</td></tr>`;
+      });
+    }
+
+
+
+    // Inicializar
+    carregarUsuarios();
+    carregarProdutos();
+  </script>
+
 </body>
-
 </html>
