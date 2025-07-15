@@ -1,127 +1,156 @@
-// server.ts
+import fastify, { FastifyReply } from "fastify";
+import cors from "@fastify/cors";
+import mysql from "mysql2/promise";
 
-import mysql from 'mysql2/promise';
-import fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import cors from '@fastify/cors';
+// ===== CONFIG. BANCO ===================================================== //
+const pool = mysql.createPool({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "banco1023a",
+  port: 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+});
 
+// Função utilitária para querys
+const query = async (sql: string, params?: any[]) => {
+  const [rows] = await pool.query(sql, params);
+  return rows;
+};
+
+// ===== FASTIFY ============================================================== //
 const app = fastify();
 app.register(cors);
 
-// Conexão com banco de dados
-const conexaoDB = async () => {
-  return await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'banco1023a',
-    port: 3306
-  });
-};
+// Tratamento genérico de erro do MySQL
+function tratarErro(erro: any, reply: FastifyReply) {
+  const map: Record<string, string> = {
+    ECONNREFUSED: "ERRO: Conexão recusada. Ligue o servidor MySQL.",
+    ER_BAD_DB_ERROR: "ERRO: Banco de dados não existe.",
+    ER_NO_SUCH_TABLE: "ERRO: Tabela não encontrada.",
+    ER_DUP_ENTRY: "ERRO: Registro duplicado.",
+  };
 
-// Rota raiz
-app.get('/', async (_, reply) => {
-  reply.send("Fastify Funcionando");
-});
+  console.error(erro);
+  reply.status(400).send({ mensagem: map[erro.code] ?? "Erro desconhecido." });
+}
 
-// Tratamento de erros de banco
-const tratarErro = (erro: any, reply: FastifyReply) => {
-  switch (erro.code) {
-    case "ECONNREFUSED":
-      reply.status(400).send({ mensagem: "ERRO: CONEXÃO RECUSADA. LIGUE O SERVIDOR MYSQL" });
-      break;
-    case "ER_BAD_DB_ERROR":
-      reply.status(400).send({ mensagem: "ERRO: BANCO DE DADOS NÃO EXISTE" });
-      break;
-    case "ER_NO_SUCH_TABLE":
-      reply.status(400).send({ mensagem: "ERRO: TABELA NÃO ENCONTRADA NO BANCO DE DADOS" });
-      break;
-    case "ER_DUP_ENTRY":
-      reply.status(400).send({ mensagem: "ERRO: REGISTRO DUPLICADO" });
-      break;
-    default:
-      console.error(erro);
-      reply.status(400).send({ mensagem: "ERRO DESCONHECIDO" });
-  }
-};
+// ===== ROTA RAIZ ========================================================== //
+app.get("/", (_, reply) => reply.send("Fastify rodando 🚀"));
 
-// ===== ROTA: USUÁRIOS =====
+// ========================================================================== //
+// ================  C A T E G O R I A S  =================================== //
+// ========================================================================== //
 
-// Listar usuários
-app.get('/usuarios', async (_, reply) => {
+app.get("/categorias", async (_, reply) => {
   try {
-    const conn = await conexaoDB();
-    const [dados] = await conn.query("SELECT * FROM usuarios");
+    const dados = await query("SELECT * FROM categorias");
     reply.send(dados);
-  } catch (erro: any) {
-    tratarErro(erro, reply);
+  } catch (e) {
+    tratarErro(e, reply);
   }
 });
 
-// Cadastrar usuário
-app.post('/usuarios', async (request, reply) => {
-  const { id, nome, email } = request.body as any;
-
-  if (!id || !nome || !email) {
-    return reply.status(400).send({ mensagem: "Dados incompletos para cadastro de usuário" });
-  }
+app.post("/categorias", async (req, reply) => {
+  const { nome } = req.body as { nome?: string };
+  if (!nome) return reply.status(400).send({ mensagem: "Nome é obrigatório." });
 
   try {
-    const conn = await conexaoDB();
-    const resultado = await conn.query(
-      "INSERT INTO usuarios (id, nome, email) VALUES (?, ?, ?)",
-      [id, nome, email]
+    const resultado = await query("INSERT INTO categorias (nome) VALUES (?)", [
+      nome,
+    ]);
+    reply.send(resultado);
+  } catch (e) {
+    tratarErro(e, reply);
+  }
+});
+
+// ========================================================================== //
+// ==================  P R O D U T O S  ===================================== //
+// ========================================================================== //
+
+app.get("/produtos", async (_, reply) => {
+  try {
+    /* inclui nome da categoria apenas para exibição */
+    const dados = await query(`
+      SELECT p.id, p.nome, p.preco,
+             p.categoria_id AS categoriaId,
+             c.nome AS categoria
+      FROM produtos p
+      LEFT JOIN categorias c ON c.id = p.categoria_id
+    `);
+    reply.send(dados);
+  } catch (e) {
+    tratarErro(e, reply);
+  }
+});
+
+app.post("/produtos", async (req, reply) => {
+  const { nome, preco, categoriaId } = req.body as {
+    nome?: string;
+    preco?: number;
+    categoriaId?: number;
+  };
+
+  if (!nome || preco == null)
+    return reply
+      .status(400)
+      .send({ mensagem: "Nome e preço são obrigatórios." });
+
+  try {
+    const resultado = await query(
+      "INSERT INTO produtos (nome, preco, categoria_id) VALUES (?, ?, ?)",
+      [nome, preco, categoriaId ?? null]
     );
     reply.send(resultado);
-  } catch (erro: any) {
-    tratarErro(erro, reply);
+  } catch (e) {
+    tratarErro(e, reply);
   }
 });
 
-// ===== ROTA: PRODUTOS =====
+// ========================================================================== //
+// ==================  C L I E N T E S  ===================================== //
+// ========================================================================== //
 
-// Listar produtos
-app.get('/produtos', async (_, reply) => {
+app.get("/clientes", async (_, reply) => {
   try {
-    const conn = await conexaoDB();
-    const [dados] = await conn.query("SELECT * FROM produtos");
+    const dados = await query("SELECT * FROM clientes");
     reply.send(dados);
-  } catch (erro: any) {
-    tratarErro(erro, reply);
+  } catch (e) {
+    tratarErro(e, reply);
   }
 });
 
-// Cadastrar produto
-app.post('/produtos', async (request, reply) => {
-  const { id, nome, preco } = request.body as any;
-
-  if (!id || !nome || preco == null) {
-    return reply.status(400).send({ mensagem: "Dados incompletos para cadastro de produto" });
-  }
+app.post("/clientes", async (req, reply) => {
+  const { nome, email } = req.body as { nome?: string; email?: string };
+  if (!nome || !email)
+    return reply
+      .status(400)
+      .send({ mensagem: "Nome e e‑mail são obrigatórios." });
 
   try {
-    const conn = await conexaoDB();
-    const resultado = await conn.query(
-      "INSERT INTO produtos (id, nome, preco) VALUES (?, ?, ?)",
-      [id, nome, preco]
+    const resultado = await query(
+      "INSERT INTO clientes (nome, email) VALUES (?, ?)",
+      [nome, email]
     );
     reply.send(resultado);
-  } catch (erro: any) {
-    tratarErro(erro, reply);
+  } catch (e) {
+    tratarErro(e, reply);
   }
 });
 
-// Iniciar servidor
+// ========================================================================== //
+// ==================  S E R V I D O R  ===================================== //
+// ========================================================================== //
+
 app.listen({ port: 8000 }, (err, address) => {
   if (err) {
     console.error(err);
     process.exit(1);
   }
-  console.log(`Servidor rodando em: ${address}`);
+  console.log("🔌  API ligada em", address);
 });
-
-
-
-
 
 
 
@@ -129,20 +158,48 @@ app.listen({ port: 8000 }, (err, address) => {
 
 /*
 
+-- Criar o banco de dados
+CREATE DATABASE banco1023a;
 
+-- Usar o banco de dados
+USE banco1023a;
 
-use banco1023a;
-CREATE TABLE usuarios (
-  id INT PRIMARY KEY,
-  nome VARCHAR(100),
-  email VARCHAR(100)
+-- Criar tabela Categorias
+CREATE TABLE categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,      -- Chave primária
+    nome VARCHAR(255) NOT NULL              -- Nome da categoria
 );
 
-use banco1023a;
+-- Criar tabela Produtos
 CREATE TABLE produtos (
-  id INT PRIMARY KEY,
-  nome VARCHAR(100),
-  preco DECIMAL(10, 2)
+    id INT AUTO_INCREMENT PRIMARY KEY,      -- Chave primária
+    nome VARCHAR(255) NOT NULL,             -- Nome do produto
+    preco DECIMAL(10,2) NOT NULL,           -- Preço do produto (com 2 casas decimais)
+    categoria_id INT,                       -- ID da categoria (chave estrangeira)
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE SET NULL  -- Relacionamento com a tabela 'categorias'
 );
 
+-- Criar tabela Clientes
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,      -- Chave primária
+    nome VARCHAR(255) NOT NULL,             -- Nome do cliente
+    email VARCHAR(255) NOT NULL UNIQUE      -- E-mail do cliente (único)
+);
+
+-- Inserir algumas categorias (dados iniciais)
+INSERT INTO categorias (nome) VALUES
+('Eletrônicos'),
+('Vestuário'),
+('Alimentos');
+
+-- Inserir alguns produtos (dados iniciais)
+INSERT INTO produtos (nome, preco, categoria_id) VALUES
+('Smartphone', 1999.99, 1),  -- Categoria 1: Eletrônicos
+('Camiseta', 59.90, 2),      -- Categoria 2: Vestuário
+('Arroz', 3.50, 3);          -- Categoria 3: Alimentos
+
+-- Inserir alguns clientes (dados iniciais)
+INSERT INTO clientes (nome, email) VALUES
+('Carlos Silva', 'carlos.silva@example.com'),
+('Maria Oliveira', 'maria.oliveira@example.com');
 */
